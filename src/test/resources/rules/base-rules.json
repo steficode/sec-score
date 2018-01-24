@@ -1,0 +1,223 @@
+{
+  "ruleList": [
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']/config/items[name/text()='hadoop_security_authentication']/value='kerberos'",
+      "level": 1,
+      "description": "HDFS Kerberos",
+      "fatal": true,
+      "passMessage" : "HDFS Kerberos is configured",
+      "errorMessage": "Cluster's HDFS is not secured",
+      "score": 50
+    },
+    {
+      "ruleXPath": "/Security/config/ObjectNode/items[name='AGENT_TLS']/value='true'",
+      "level": 1,
+      "description": "Agent TLS",
+      "fatal": true,
+      "passMessage" : "Agent TLS is configured",
+      "errorMessage": "Agent TLS is not configured",
+      "score": 20
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HUE']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HUE']//items[name='ssl_enable']/value='true'",
+      "level": 1,
+      "description": "Hue TLS",
+      "fatal": false,
+      "passMessage" : "Hue is configured to use TLS",
+      "errorMessage": "Hue is not configured for TLS (HTTPS)",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/sec-inspector/ObjectNode/failedHostsWithError/*",
+      "level": 10,
+      "description": "Security Inspector Failures",
+      "fatal": false,
+      "failOnTrue": true,
+      "passMessage" : "All hosts passed the host inspector",
+      "errorMessage": "One or more hosts failed the host inspector",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[.//config/items/value[starts-with(text(),'ldap://')]]/name",
+      "level": 1,
+      "description": "LDAPS is preferred to LDAP.",
+      "fatal": false,
+      "passMessage" : "No insecure LDAP is found.",
+      "errorMessage": "The following services use LDAP instead of LDAPS: {0}",
+      "failOnTrue": "true",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='IMPALA']//config/items[name='disk_spill_encryption']/value='true'",
+      "level": 3,
+      "description": "Impala disk spill encryption",
+      "fatal": false,
+      "passMessage" : "Impala is configured with disk spill encryption.",
+      "errorMessage": "Impala is not configured for disk spill encryption.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='kms_service'][value=/Security/deployment/ObjectNode/clusters/services[type='KMS']/name]",
+      "level": 1,
+      "description": "HDFS KMS",
+      "fatal": false,
+      "passMessage" : "HDFS KMS is configured.",
+      "errorMessage": "HDFS KMS is not configured.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='SOLR']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='SOLR']//config/items[name='sentry_service'][value=/Security/deployment/ObjectNode/clusters/services[type='SENTRY']/name]",
+      "level": 1,
+      "description": "Solr configured for Sentry Service.",
+      "fatal": false,
+      "passMessage" : "Solr is using the Sentry Service.",
+      "errorMessage": "Solr is not configured to use the Sentry Service",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/managementService[type='MGMT']/roles[type='NAVIGATOR']",
+      "level": 2,
+      "description": "Cloudera Navigator.",
+      "fatal": false,
+      "passMessage" : "Cloudera Navigator is installed.",
+      "errorMessage": "Cloudera Navigator is not installed",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/managerSettings/items[name='LDAP_URL']/value[starts-with(text(), 'ldaps:')]",
+      "level": 1,
+      "description": "Cloudera Manager configured to use LDAPS rather than LDAP",
+      "fatal": false,
+      "passMessage" : "CM uses LDAPS rather than LDAP.",
+      "errorMessage": "Cloudera Manager is configured to use LDAP rather than LDAPS.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/managerSettings/items[name='KRB_ENC_TYPES']/value[contains(text(), 'rmac') or contains(text(), 'des')]",
+      "level": 1,
+      "description": "Kerberos encryption types.",
+      "fatal": false,
+      "passMessage" : "Strong encryption types used for KDC.",
+      "errorMessage": "Weak encryption types used for KDC {0}.",
+      "failOnTrue": "true",
+      "score": 1
+    },
+    {
+      "ruleXPath": "/Security/deployment/ObjectNode/managerSettings/items[name='WEB_TLS']/value='true'",
+      "level": 1,
+      "description": "CM web TLS",
+      "fatal": false,
+      "passMessage" : "CM server web TLS is configured",
+      "errorMessage": "CM server web TLS is not configured",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='SOLR']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='SOLR']//config/items[name='navigator_audit_enabled']/value='true'",
+      "level": 1,
+      "description": "Solr Navigator audit event collection",
+      "fatal": false,
+      "passMessage" : "Solr Navigator audit event collection is enabled.",
+      "errorMessage": "Solr Navigator audit event collection is disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='KAFKA']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='KAFKA']//config/items[name='kerberos.auth.enable']/value='true'",
+      "level": 1,
+      "description": "Kafka Kerberos authentication",
+      "fatal": true,
+      "passMessage" : "Kafka Kerberos authentication is enabled.",
+      "errorMessage": "Kafka Kerberos authentication is disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='KEYTRUSTEE']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='KEYTRUSTEE']//config/items[name='hadoop_kms_authentication_type']/value='kerberos'",
+      "level": 1,
+      "description": "KMS Kerberos authentication",
+      "fatal": true,
+      "passMessage" : "KMS Kerberos authentication is enabled.",
+      "errorMessage": "KMS Kerberos authentication is disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='dfs_encrypt_data_transfer']/value='true'",
+      "level": 2,
+      "description": "HDFS encrypted data transport",
+      "fatal": false,
+      "passMessage" : "HDFS encrypted data transport is enabled.",
+      "errorMessage": "HDFS encrypted data transport is disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='dfs_data_transfer_protection']/value='privacy'",
+      "level": 2,
+      "description": "Hadoop RPC Protection",
+      "fatal": false,
+      "passMessage" : "Hadoop RPC Protection is enabled.",
+      "errorMessage": "Hadoop RPC Protection is disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='dfs_namenode_acls_enabled']/value='true'",
+      "level": 1,
+      "description": "HDFS Extended ACLs",
+      "fatal": false,
+      "passMessage" : "HDFS Extended ACLs enabled.",
+      "errorMessage": "HDFS Extended ACLs disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='hdfs_hadoop_ssl_enabled']/value='true'",
+      "level": 1,
+      "description": "HDFS Sentry Sync",
+      "fatal": false,
+      "passMessage" : "HDFS Sentry Sync enabled.",
+      "errorMessage": "HDFS Sentry Sync disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']/roles/type='HTTPFS'",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']//config/items[name='httpfs_use_ssl']/value='true'",
+      "level": 1,
+      "description": "HDFS HTTPFS TLS",
+      "fatal": false,
+      "passMessage" : "HDFS HTTPFS TLS enabled.",
+      "errorMessage": "HDFS HTTPFS TLS disabled.",
+      "failOnTrue": "false",
+      "score": 1
+    },
+    {
+      "preConditionXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']",
+      "ruleXPath": "/Security/deployment/ObjectNode/clusters/services[type='HDFS']/roles/type='NFSGATEWAY'",
+      "level": 1,
+      "description": "HDFS NFS Gateway",
+      "fatal": false,
+      "passMessage" : "HDFS NFS Gateway is not enabled.",
+      "errorMessage": "HDFS NFS Gateway is a security risk and should be disabled.",
+      "failOnTrue": "true",
+      "score": 1
+    }
+  ]
+}

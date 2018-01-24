@@ -1,0 +1,19 @@
+#!/usr/bin/python
+from __future__ import print_function
+import json
+import sys
+import requests
+
+data = json.load(sys.stdin)
+rulelist = data["ruleList"]
+for rule in rulelist:
+  if ( "documentation" in rule ):
+    try:
+      req = requests.get(rule["documentation"])
+      if ( req.status_code != requests.codes.ok ):
+        raise
+    except:
+      print("Rule id:",rule["id"], "description:",rule["description"], "has a documentation link that cannot be accessed: ", rule["documentation"])
+  else:
+    print("Rule id:",rule["id"], "description:",rule["description"], "does not have a documentation link")
+

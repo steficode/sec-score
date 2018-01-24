@@ -1,0 +1,519 @@
+<html ng-app="securityScoreApp">
+<head>
+  {dependencies}
+  <script type="text/javascript">
+
+// Production steps of ECMA-262, Edition 6, 22.1.2.1
+// Modified to handle sets, because ECMA-262 implementation does not support generic iterables 
+if (!Array.from) {
+  Array.from = (function () {
+    var toStr = Object.prototype.toString;
+    var isCallable = function (fn) {
+      return typeof fn === 'function' || toStr.call(fn) === '[object Function]';
+    };
+    var toInteger = function (value) {
+      var number = Number(value);
+      if (isNaN(number)) { return 0; }
+      if (number === 0 || !isFinite(number)) { return number; }
+      return (number > 0 ? 1 : -1) * Math.floor(Math.abs(number));
+    };
+    var maxSafeInteger = Math.pow(2, 53) - 1;
+    var toLength = function (value) {
+      var len = toInteger(value);
+      return Math.min(Math.max(len, 0), maxSafeInteger);
+    };
+
+    // The length property of the from method is 1.
+    return function from(arrayLike/*, mapFn, thisArg */) {
+      // 1. Let C be the this value.
+      var C = this;
+
+      // 2. Let items be ToObject(arrayLike).
+      var items = Object(arrayLike);
+
+      // 3. ReturnIfAbrupt(items).
+      if (arrayLike == null) {
+        throw new TypeError('Array.from requires an array-like object - not null or undefined');
+      }
+
+      // 4. If mapfn is undefined, then let mapping be false.
+      var mapFn = arguments.length > 1 ? arguments[1] : void undefined;
+      var T;
+      if (typeof mapFn !== 'undefined') {
+        // 5. else
+        // 5. a If IsCallable(mapfn) is false, throw a TypeError exception.
+        if (!isCallable(mapFn)) {
+          throw new TypeError('Array.from: when provided, the second argument must be a function');
+        }
+
+        // 5. b. If thisArg was supplied, let T be thisArg; else let T be undefined.
+        if (arguments.length > 2) {
+          T = arguments[2];
+        }
+      }
+
+
+      // 10. Let lenValue be Get(items, "length").
+      // 11. Let len be ToLength(lenValue).
+      if (items instanceof Set) {
+        var len = toLength(items.size);
+      
+        // 13. If IsConstructor(C) is true, then
+        // 13. a. Let A be the result of calling the [[Construct]] internal method 
+        // of C with an argument list containing the single item len.
+        // 14. a. Else, Let A be ArrayCreate(len).
+        var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+
+        // 16. Let k be 0.
+        var k = 0;
+        items.forEach(function (item) {  
+          A[k++] = item;
+        }); 
+        // 18. Let putStatus be Put(A, "length", len, true).
+        A.length = len;
+        // 20. Return A.
+        return A;
+        
+        /*
+        // 13. If IsConstructor(C) is true, then
+        // 13. a. Let A be the result of calling the [[Construct]] internal method 
+        // of C with an argument list containing the single item len.
+        // 14. a. Else, Let A be ArrayCreate(len).
+        var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+
+        // 16. Let k be 0.
+        var k = 0;
+        // 17. Repeat, while k < len… (also steps a - h)
+        var kValue;
+        while (k < len) {
+          kValue = items[k];
+          if (mapFn) {
+            A[k] = typeof T === 'undefined' ? mapFn(kValue, k) : mapFn.call(T, kValue, k);
+          } else {
+            A[k] = kValue;
+          }
+          k += 1;
+        }
+        // 18. Let putStatus be Put(A, "length", len, true).
+        A.length = len;
+        // 20. Return A.
+        return A;
+        */
+      } else {
+        var len = toLength(items.length);
+      
+        // 13. If IsConstructor(C) is true, then
+        // 13. a. Let A be the result of calling the [[Construct]] internal method 
+        // of C with an argument list containing the single item len.
+        // 14. a. Else, Let A be ArrayCreate(len).
+        var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+
+        // 16. Let k be 0.
+        var k = 0;
+        // 17. Repeat, while k < len… (also steps a - h)
+        var kValue;
+        while (k < len) {
+          kValue = items[k];
+          if (mapFn) {
+            A[k] = typeof T === 'undefined' ? mapFn(kValue, k) : mapFn.call(T, kValue, k);
+          } else {
+            A[k] = kValue;
+          }
+          k += 1;
+        }
+        // 18. Let putStatus be Put(A, "length", len, true).
+        A.length = len;
+        // 20. Return A.
+        return A;
+      }
+    };
+  }());
+}
+
+// https://tc39.github.io/ecma262/#sec-array.prototype.includes
+if (!Array.prototype.includes) {
+  Object.defineProperty(Array.prototype, 'includes', {
+    value: function(searchElement, fromIndex) {
+
+      // 1. Let O be ? ToObject(this value).
+      if (this == null) {
+        throw new TypeError('"this" is null or not defined');
+      }
+
+      var o = Object(this);
+
+      // 2. Let len be ? ToLength(? Get(O, "length")).
+      var len = o.length >>> 0;
+
+      // 3. If len is 0, return false.
+      if (len === 0) {
+        return false;
+      }
+
+      // 4. Let n be ? ToInteger(fromIndex).
+      //    (If fromIndex is undefined, this step produces the value 0.)
+      var n = fromIndex | 0;
+
+      // 5. If n ≥ 0, then
+      //  a. Let k be n.
+      // 6. Else n < 0,
+      //  a. Let k be len + n.
+      //  b. If k < 0, let k be 0.
+      var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+
+      function sameValueZero(x, y) {
+        return x === y || (typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y));
+      }
+
+      // 7. Repeat, while k < len
+      while (k < len) {
+        // a. Let elementK be the result of ? Get(O, ! ToString(k)).
+        // b. If SameValueZero(searchElement, elementK) is true, return true.
+        // c. Increase k by 1. 
+        if (sameValueZero(o[k], searchElement)) {
+          return true;
+        }
+        k++;
+      }
+
+      // 8. Return false
+      return false;
+    }
+  });
+}
+
+
+var securityScoreApp = angular.module('securityScoreApp', []);
+
+securityScoreApp.controller('SecurityScoreController', ['$scope', 'filterFilter', function SecurityScoreController($scope, filterFilter) {
+  $scope.headers = [
+    { "columnName" : "pass",        "label" : "Result" },
+    { "columnName" : "description", "label" : "Description" },
+    { "columnName" : "service",     "label" : "Service" },
+    { "columnName" : "level",       "label" : "Level" },
+    { "columnName" : "score",       "label" : "Score" },
+    { "columnName" : "message",     "label" : "Message" },
+    { "columnName" : "info",        "label" : "Info" }
+  ]
+  $scope.sortingColumn = ['pass','-score','level'];
+  $scope.sortingDescending = false;
+  $scope.passValues = [ {name: "Passed", value: true}, {name: "Failed", value: false} ]
+  $scope.activePage = 'results';
+  $scope.passFilter = null;
+  $scope.serviceFilter = null;
+  $scope.categoryFilter = null;
+  $scope.filterDisplay = { cluster: true, pass: true, service: true, category: true };
+  $scope.sortingClick = function(column) {
+    if ($scope.sortingColumn != column) {
+        $scope.sortingDescending = false;
+    } else {
+        $scope.sortingDescending = !$scope.sortingDescending;
+    }
+    $scope.sortingColumn = column;
+  }
+  $scope.selectPage = function(page) {
+    $scope.activePage = page;
+  }
+  $scope.selectClusterFilter = function(filter) {
+    $scope.clusterFilter = filter;
+    $scope.applyFilter();
+  }
+  $scope.selectPassFilter = function(filter) {
+    $scope.passFilter = filter;
+    $scope.applyFilter();
+  }
+  $scope.selectServiceFilter = function(filter) {
+    $scope.serviceFilter = filter;
+    $scope.applyFilter();
+  }
+  $scope.selectCategoryFilter = function(filter) {
+    $scope.categoryFilter = filter;
+    $scope.applyFilter();
+  }
+  $scope.getClusterResults = function(clusterId) {
+    if (typeof(clusterId) === 'undefined') {
+      clusterId = $scope.clusterFilter;
+    }
+    var result = filterFilter($scope.results, function(value, index, array) {
+        return (value.clusterId === clusterId);
+      });
+    if (result.length != 1) {
+      return null;
+    } else {
+      return result[0];
+    }
+  }
+  $scope.applyFilter = function() {
+    $scope.results.forEach(function(result){
+      $scope.filteredResult[result.clusterId] = filterFilter(result.resultList, function(value, index, array) {
+        if ($scope.passFilter !== null && ($scope.passFilter && !value.pass || !$scope.passFilter && value.pass)) {
+          return false;
+        }
+        if ($scope.serviceFilter !== null &&
+          ($scope.serviceFilter === 'Unknown' && typeof value.service !== 'undefined' ||
+           $scope.serviceFilter !== 'Unknown' && value.service !== $scope.serviceFilter)) {
+          return false;
+        }
+        if ($scope.fullTextFilter !== null && filterFilter([value], $scope.fullTextFilter).length == 0) {
+          return false;
+        }
+        if ($scope.categoryFilter !== null &&
+          ($scope.categoryFilter === 'Unknown' && typeof value.categories !== 'undefined' ||
+           $scope.categoryFilter !== 'Unknown' && !value.categories.includes($scope.categoryFilter))) {
+          return false;
+        }
+        return true;
+      });
+    });
+  }
+  $scope.count = function(list, attr, value) {
+    if (typeof(attr) === 'undefined') {
+      return list.length;
+    } else {
+      return list.filter(function(x){
+        var v;
+        if (typeof x[attr] === 'undefined') {
+          v = 'Unknown';
+        } else {
+          v = x[attr];
+        }
+        if (typeof v === 'object' && v instanceof Array) {
+            return v.includes(value);
+        } else {
+            return v == value
+        }
+      }).length;
+    }
+  }
+  $scope.countFiltered = function(clusterId, attr, value) {
+    return $scope.count($scope.filteredResult[clusterId], attr, value);
+  }
+  $scope.countUnfiltered = function(clusterId, attr, value) {
+    var result = $scope.getClusterResults(clusterId);
+    if (result === null) {
+      return 0;
+    } else {
+      return $scope.count(result.resultList, attr, value);
+    }
+  }
+  $scope.services = function() {
+    var set = new Set();
+    $scope.results.forEach(function(result){
+      result.resultList.forEach(function(x){if (x.service) { set.add(x.service) } else { set.add('Unknown') }});
+    });
+    return Array.from(set);
+  }
+  $scope.categories = function() {
+    var set = new Set();
+    $scope.results.forEach(function(result){
+      result.resultList.forEach(function(x){ 
+        x.categories.forEach(function(x){
+            set.add(x)
+        })
+      }) 
+    });
+    return Array.from(set);
+  }
+  $scope.calculateOverallTotalScore = function() {
+    var total = 0;
+    $scope.results.forEach(function(result){
+      total += result.totalScore;
+    });
+    return total;
+  }
+  $scope.calculateOverallMaximumScore = function() {
+    var total = 0;
+    $scope.results.forEach(function(result){
+      total += result.maximumScore;
+    });
+    return total;
+  }
+  $scope.calculateOverallPercentage = function() {
+    return Math.floor(100 * ($scope.calculateOverallTotalScore() / $scope.calculateOverallMaximumScore()));
+  }
+  $scope.toggleFilterDisplay = function(filter) {
+    if (! filter in $scope.filterDisplay) {
+      $scope.filterDisplay[filter] = true;
+    }
+    $scope.filterDisplay[filter] = ! $scope.filterDisplay[filter];
+  }
+  $scope.results = {results};
+  var nextClusterId = 1;
+  $scope.clusterFilter = 0;
+  $scope.filteredResult = {};
+  $scope.results.forEach(function(result){
+    $scope.filteredResult[nextClusterId] = result.resultList;
+    result["clusterId"] = nextClusterId;
+    if ($scope.clusterFilter === 0) {
+      $scope.clusterFilter = nextClusterId;
+    }
+    nextClusterId += 1;
+  });
+  $scope.applyFilter();
+}]);
+
+    </script>
+  <style>
+    body { background-color: #ECEFF1; }
+    div { display: block; }
+    h1 { font-size: 24px; font-weight: normal; line-height: 48px; margin-top: 0; margin-bottom: 0; font-family: inherit; color: #424242; text-rendering: optimizelegibility; display: block; }
+    h3 { font-size: 16px; font-weight: 600; line-height: 24px; margin-top: 0; margin-bottom: 12px; font-family: inherit; color: #424242; text-rendering: optimizelegibility; display: block; }
+    html { -webkit-font-smoothing: antialiased; }
+    li { line-height: 20px; }
+    table#resultTable { font-size: small; }
+    .chevron-rotated { transform: rotate(90deg) }
+    .container-fluid { background-color: #FFFFFF; margin-left: 0; margin-right: 0; padding: 24px; }
+    .cui-title-bar { height: inherit; padding: 0 24px; margin: 0; min-height: 44px; background-color: #F8F8F8; border-bottom-width: 0; box-shadow: inset 0 -1px #DCDCDC; }
+    .display-group-filter-values { padding: 0; }
+    .env-ribbon { width: 100%; height: 8px; background-image: inherit; }
+    .env-ribbon--blue { background-color: #53B8E4; }
+    .failed { color: red }
+    .filter-panel .clear-filter, .filter-panel .clear-all-filters { cursor: pointer; color: #53B8E4; font-size: 12px; font-weight: normal; }
+    .filter-panel { width: 260px; float: left; margin-bottom: 60px; }
+    .filter-panel+.table-panel { margin-left: 280px; }
+    .filters .filter .filter-item-count { position: absolute; right: 8px; color: #A0A0A0; box-sizing: border-box; }
+    .filters .filter ul li { font-size: 13px; position: relative; display: list-item; color: #A0A0A0; padding: 2px 4px 2px 4px; margin-left: 16px; }
+    .filters .filter ul li.filter-item-active { cursor: pointer; color: #424242; }
+    .filters .filter ul li.filter-item-selected { background-color: #E7E7E7; color: #424242; }
+    .filters .filter ul { list-style: none; }
+    .filters .filter { margin-bottom: 8px; }
+    .filters .filter>.filter-header { cursor: pointer; position: relative; margin-top: 0; margin-bottom: 0; }
+    .filters .filter>.filter-header>.clear-filter { position: absolute; right: 0; top: 2px; }
+    .filters .filter>.filter-header>.title { color: #787878; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #DCDCDC; box-sizing: border-box; padding-bottom: 3px; display: inline-block; width: 240px; cursor: pointer; }
+    .filters { margin-top: 24px; }
+    .navbar .nav>.active>a, .navbar .nav>.active>a:hover, .navbar .nav>.active>a:focus { text-decoration: none; color: #424242; background-color: #F1EFEF; box-shadow: none; }
+    .navbar .nav>li>a { padding: 15px; float: none; text-shadow: 0 1px 0 #FFFFFF; }
+    .navbar .nav>li>a:focus, .navbar .nav>li>a:hover { background-color: #E7E7E7; color: #787878; text-decoration: none; }
+    .navbar { margin:0 }
+    .navbar-default { background-color: #fff; }
+    .passed { color: green }
+    .pull-right { float: right; }
+    .sorting { display:inline; background-repeat: no-repeat; background-position: right; padding-right: 12px; }
+    .sorting-asc { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAALCAMAAACETmeaAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo1QzU0RjUwMkM2M0ExMUUzQkE3RENCRkE4MkM0NUI5NSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo1QzU0RjUwM0M2M0ExMUUzQkE3RENCRkE4MkM0NUI5NSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjVDNTRGNTAwQzYzQTExRTNCQTdEQ0JGQTgyQzQ1Qjk1IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjVDNTRGNTAxQzYzQTExRTNCQTdEQ0JGQTgyQzQ1Qjk1Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+Kz5yFAAAACdQTFRFzM/SYHiQdYmc09bYprK/zdTb7/Dx+/v79fb3kqGx4uTm3N7g////DyDbkAAAAA10Uk5T////////////////AD3oIoYAAAA9SURBVHjaHIzJDQAwDMIg6V32n7eklpAfCCApHEibu9xJdmGFHQuNRXP/wUFxMNPKCQ171P7i/h+l8wQYAFkUAgg6MWS8AAAAAElFTkSuQmCC') }
+    .sorting-desc { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAALCAMAAACETmeaAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFQzM2MEFEREM2MzkxMUUzQkE3RENCRkE4MkM0NUI5NSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFQzM2MEFERUM2MzkxMUUzQkE3RENCRkE4MkM0NUI5NSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkVDMzYwQURCQzYzOTExRTNCQTdEQ0JGQTgyQzQ1Qjk1IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkVDMzYwQURDQzYzOTExRTNCQTdEQ0JGQTgyQzQ1Qjk1Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+xq7P6gAAACdQTFRFzM/SYHiQdYmc09bYprK/zdTb7/Dx+/v79fb3kqGx4uTm3N7g////DyDbkAAAAA10Uk5T////////////////AD3oIoYAAAA8SURBVHjaHIxJDgAgEMKq4y7/f6+MTUgPBJAUDtLlpgcwxAw7JofkuP/QStJY1aoLdbvnfpf9f1SdJ8AAWgQCCGqBgmYAAAAASUVORK5CYII=') }
+    .sorting-none { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAALCAMAAACETmeaAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFQzM2MEFEOUM2MzkxMUUzQkE3RENCRkE4MkM0NUI5NSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFQzM2MEFEQUM2MzkxMUUzQkE3RENCRkE4MkM0NUI5NSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkVDMzYwQUQ3QzYzOTExRTNCQTdEQ0JGQTgyQzQ1Qjk1IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkVDMzYwQUQ4QzYzOTExRTNCQTdEQ0JGQTgyQzQ1Qjk1Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+Mi3d0gAAABVQTFRFzM/S09bY+/v73N7g4uTm7/Dx////jbNtvQAAAAd0Uk5T////////ABpLA0YAAAAzSURBVHjaPIwHCgAwDAIvy/8/uUlLI4iIA0nWRApitIASbq3mJIPs/GL9z39/9+/vCDAAKvgA+U+NFzEAAAAASUVORK5CYII=') }
+    .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th { padding: 8px; line-height: 1; vertical-align: middle; border-top: 1px solid #ddd; }
+    .table>thead>tr>th>a { text-decoration: none }
+
+  </style>
+</head>
+<body ng-controller="SecurityScoreController">
+<nav class="navbar navbar-default">
+  <div class="navbar-inner">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="#">
+        <img alt="Cloudera Logo" style="height: 20px" src="data:image/svg+xml;charset=utf-8;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMTc1IDMxLjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDE3NSAzMS4zOyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PHN0eWxlIHR5cGU9InRleHQvY3NzIj4uc3Qwe2ZpbGw6IzAwNTg4NDt9LnN0MXtmaWxsOiMwMDU4ODI7fS5zdDJ7ZmlsbDojMDBBN0UwO308L3N0eWxlPjxnPjxnPjxnPjxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xNzAuMyw2LjljMS41LDAsMi40LDEuMSwyLjQsMi40YzAsMS4zLTEsMi40LTIuNCwyLjRjLTEuNSwwLTIuNC0xLjEtMi40LTIuNEMxNjcuOCw4LDE2OC44LDYuOSwxNzAuMyw2Ljl6TTE3MC4zLDExLjRjMS4yLDAsMi0wLjksMi0yYzAtMS4xLTAuOS0yLjEtMi0yLjFjLTEuMiwwLTIsMC45LTIsMi4xQzE2OC4yLDEwLjUsMTY5LjEsMTEuNCwxNzAuMywxMS40eiBNMTcwLjMsOS43aC0wLjV2MS4xaC0wLjVWOGgxYzAuNywwLDEuMSwwLjIsMS4xLDAuOWMwLDAuNC0wLjEsMC43LTAuNSwwLjhsMC41LDEuMWgtMC42TDE3MC4zLDkuN3ogTTE2OS44LDkuM2gwLjVjMC4zLDAsMC41LTAuMSwwLjUtMC40YzAtMC4zLTAuMi0wLjQtMC42LTAuNGgtMC40VjkuM3oiLz48L2c+PGc+PGc+PHBhdGggY2xhc3M9InN0MSIgZD0iTTE0My40LDdjLTEuNiwwLTMuMiwwLjItNC44LDAuNmMtMC43LDAuMi0xLjQsMC40LTIsMC43Yy0wLjEtMC4yLTAuMy0wLjQtMC40LTAuNUMxMzUuNiw3LjMsMTM0LjgsNywxMzQsN2gtMy4zdjIzLjdoNi40VjE4LjRjMC0yLjQsMC40LTMuMywxLjMtNC4yYzAuOC0wLjgsMi4xLTEuMiwzLjktMS4yaDIuN1Y3SDE0My40Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTI3LjMsMGgtMy4zdjI3LjhjMCwwLjgsMC4zLDEuNSwwLjksMi4xYzAuNiwwLjYsMS4zLDAuOCwyLjIsMC44aDMuM1YyLjljMC0wLjgtMC4zLTEuNS0wLjktMi4xQzI4LjksMC4zLDI4LjIsMCwyNy4zLDAiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDQsMjUuOWMzLjgsMCw1LTMuOSw1LTcuMWMwLTMuMy0xLjItNy4yLTUtNy4yYy0zLjgsMC00LjksMy45LTQuOSw3LjJDMzksMjIsNDAuMiwyNS45LDQ0LDI1Ljl6IE00NCw2LjRjNy4yLDAsMTEuMiw0LjYsMTEuMiwxMi4zYzAsNy42LTQsMTIuMi0xMS4yLDEyLjJjLTcuMywwLTExLjEtNC42LTExLjEtMTIuMkMzMi45LDExLDM2LjcsNi40LDQ0LDYuNHoiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTEuMSwyNS45Yy0zLjgsMC00LjktMy45LTQuOS03LjFjMC0zLjMsMS4xLTcuMiw0LjktNy4yYzIsMCwzLjIsMS4xLDQsMi41aDYuNmMtMS4zLTQuOS01LTcuNy0xMC42LTcuN0MzLjgsNi40LDAsMTEsMCwxOC43YzAsNy42LDMuOCwxMi4yLDExLjEsMTIuMmM1LjYsMCw5LjMtMi44LDEwLjYtNy43aC00LjNjMCwwLTEuMiwwLTEuOCwwLjZDMTQuNCwyNC45LDEzLjUsMjUuOSwxMS4xLDI1Ljl6Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTc3LjgsNy45Qzc3LjIsNy4zLDc2LjQsNyw3NS41LDdoLTMuMnYxNC44YzAsMS40LTAuNCwyLjQtMS4zLDMuMWMtMC45LDAuNi0xLjksMS0zLDFjLTEuMSwwLTIuMS0wLjMtMy0xYy0wLjktMC42LTEuMy0xLjctMS4zLTMuMVYxMGMwLTAuOC0wLjMtMS41LTAuOS0yLjFDNjIuNCw3LjMsNjEuNiw3LDYwLjcsN2gtMy4ydjEzLjhjMCw0LjIsMS4yLDYuOCwzLjQsOC4yYzIuMSwxLjQsNC41LDEuOSw3LjIsMS45YzIuNywwLDUtMC41LDcuMi0xLjljMi4yLTEuNCwzLjQtNCwzLjQtOC4yVjEwQzc4LjYsOS4xLDc4LjMsOC40LDc3LjgsNy45eiIvPjxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xMDIuOSwwLjhjLTAuNi0wLjYtMS4zLTAuOC0yLjItMC44aC0zLjJ2OC44Yy0xLTAuOS0zLTIuNC02LjEtMi40Yy02LjUsMC0xMC4yLDQuNi0xMC4yLDEyLjNjMCw3LjYsMy45LDEyLjIsMTEuMywxMi4yYzcuMywwLDExLjMtNC41LDExLjMtMTIuMWgwVjIuOUMxMDMuOCwyLjEsMTAzLjUsMS40LDEwMi45LDAuOHogTTkyLjQsMjUuOWMtMy44LDAtNS0zLjktNS03LjFjMC0zLjMsMS4yLTcuMiw1LTcuMmMzLjgsMCw1LDMuOSw1LjEsNy4xdjAuMWgwQzk3LjUsMjIsOTYuMywyNS45LDkyLjQsMjUuOXoiLz48cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTI4LjQsMTcuM2MwLDAuNS0wLjEsMS0wLjMsMS40Yy0wLjEsMC4zLTAuMywwLjUtMC41LDAuN2MtMC42LDAuNi0xLjMsMC45LTIuMSwwLjloLTEyLjljMC4yLDIuOCwxLjYsNS42LDQuOCw1LjZjMi40LDAsMy4zLTEsNC40LTJjMC43LTAuNiwxLjgtMC42LDEuOC0wLjZoNC4zYy0xLjMsNC45LTUsNy43LTEwLjYsNy43Yy03LjMsMC0xMS4xLTQuNi0xMS4xLTEyLjJjMC03LjcsMy44LTEyLjMsMTEuMS0xMi4zYzUuNiwwLDkuMywyLjgsMTAuNiw3LjdjMC4yLDAuOSwwLjQsMS44LDAuNSwyLjhMMTI4LjQsMTcuM3ogTTExNy4zLDExLjZjLTIuNiwwLTQuNCwxLjktNC42LDQuMWg5LjJDMTIxLjksMTMuNSwxMTkuOCwxMS42LDExNy4zLDExLjZ6Ii8+PHBhdGggY2xhc3M9InN0MSIgZD0iTTE2Ni4zLDEzYzAtMi4xLTAuOS0zLjctMi42LTQuOWMtMS43LTEuMS00LjItMS43LTcuNi0xLjdjLTMsMC01LjQsMC43LTcsMmMtMS41LDEuMi0yLjMsMi44LTIuNiw0LjZoNi4xYzAuMy0wLjcsMC44LTEuMiwxLjUtMS40YzAuNy0wLjIsMS40LTAuNCwyLjMtMC40YzEuMSwwLDEuOCwwLjEsMi42LDAuNGMwLjksMC4zLDEuNCwwLjgsMS40LDEuN2MwLDAuOS0xLjMsMS44LTQsMi4xYy0zLjIsMC40LTUuNywwLjctOCwyLjRjLTEuNSwxLjEtMi40LDMtMi40LDUuNGMwLDIuNiwwLjgsNC41LDIuNSw1LjZjMS40LDEsMy44LDEuOSw3LjYsMS45YzMuNCwwLDUuOS0wLjcsNy42LTEuOGMxLjgtMS4yLDIuNy0yLjUsMi44LTVWMTN6IE0xNTkuNCwyNC41Yy0xLDAuOS0yLjMsMS40LTQsMS40Yy0wLjUsMC0yLjItMC4xLTIuOS0wLjhjLTAuNS0wLjUtMC44LTEtMC44LTEuOGMwLTAuNiwwLjItMS4yLDAuNi0xLjZjMC45LTAuOSwxLjktMS4xLDQtMS41YzEuNC0wLjMsMy4xLTAuOCw0LTEuM3YxLjhDMTYwLjQsMjIuMywxNjAuNCwyMy42LDE1OS40LDI0LjV6Ii8+PC9nPjwvZz48L2c+PC9nPjwvc3ZnPg==">
+        <!--img alt="Cloudera Logo" style="height:20px" src="tmp/secscore/cloudera_logo.svg"-->
+
+      </a>
+    </div>
+    <ul class="nav navbar-nav navbar__menu--top">
+      <li role="presentation" class="dropdown" ng-class="{active: activePage=='results'}"><a ng-click="selectPage('results')" href="#">Results</a></li>
+      <li role="presentation" class="dropdown" ng-class="{active: activePage=='stats'}"><a ng-click="selectPage('stats')" href="#">Stats</a></li>
+    </ul>
+  </div>
+</nav>
+<div class="env-ribbon env-ribbon--blue"></div>
+
+<div class="cui-title-bar" ng-show="activePage=='results'">
+  <h1>Security Score: {{getClusterResults().totalScore}} / {{getClusterResults().maximumScore}} ({{getClusterResults().percentage}}) - Overall Score: {{calculateOverallTotalScore()}} / {{calculateOverallMaximumScore()}} ({{calculateOverallPercentage()}}%)</h1>
+</div>
+<div class="container-fluid" ng-show="activePage=='results'">
+  <div class="row-fluid">
+    <div class="filter-panel">
+      <h3>
+        <span class="clear-all-filters pull-right" ng-show="passFilter!==null||serviceFilter!==null||categoryFilter!==null" ng-click="selectPassFilter(null);selectServiceFilter(null);selectCategoryFilter(null)">Clear All</span>
+        Filters
+      </h3>
+      <div class="filters">
+        <div class="filter" data-hide-for-one-alt="true" data-filter-name="displayGroup" data-pourover-filter="makeExactFilter" style="">
+          <div class="filter-header">
+            <i ng-class="['glyphicon', 'tiny', 'glyphicon-chevron-right', 'filter-toggle', {'chevron-rotated': filterDisplay['cluster']}]" ng-click="toggleFilterDisplay('cluster')"></i>
+            <span class="title">Cluster</span>
+          </div>
+          <ul class="display-group-filter-values" ng-show="filterDisplay['cluster']">
+            <li ng-repeat="cluster in results | orderBy:'clusterDisplayName'" ng-class="['filter-item-active', {'filter-item-selected': clusterFilter === cluster.clusterId}]" ng-click="selectClusterFilter(cluster.clusterId)">
+              <span class="filter-item-label">{{cluster.clusterDisplayName}}</span>
+              <span class="filter-item-count">{{cluster.percentage}} / {{countUnfiltered(cluster.clusterId)}}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="filter" data-hide-for-one-alt="true" data-filter-name="displayGroup" data-pourover-filter="makeExactFilter" style="">
+          <div class="filter-header">
+            <i ng-class="['glyphicon', 'tiny', 'glyphicon-chevron-right', 'filter-toggle', {'chevron-rotated': filterDisplay['pass']}]" ng-click="toggleFilterDisplay('pass')"></i>
+            <span class="title">Result</span>
+            <span class="clear-filter" ng-show="passFilter!==null" ng-click="selectPassFilter(null)">Clear</span>
+          </div>
+          <ul class="display-group-filter-values" ng-show="filterDisplay['pass']">
+            <li ng-repeat="result in passValues | orderBy:'name'" ng-class="['filter-item-active', {'filter-item-selected': passFilter === result.value}]" ng-click="selectPassFilter(result.value)">
+              <span class="filter-item-label">{{result.name}}</span>
+              <span class="filter-item-count">{{countFiltered(clusterFilter, 'pass', result.value)}} / {{countUnfiltered(clusterFilter, 'pass', result.value)}}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="filter" data-hide-for-one-alt="true" data-filter-name="displayGroup" data-pourover-filter="makeExactFilter" style="">
+          <div class="filter-header">
+            <i ng-class="['glyphicon', 'tiny', 'glyphicon-chevron-right', 'filter-toggle', {'chevron-rotated': filterDisplay['category']}]" ng-click="toggleFilterDisplay('category')"></i>
+            <span class="title">Categories</span>
+            <span class="clear-filter" ng-show="categoryFilter!==null" ng-click="selectCategoryFilter(null)">Clear</span>
+          </div>
+          <ul class="display-group-filter-values" ng-show="filterDisplay['category']">
+            <li ng-repeat="category in categories() | orderBy:'+'" ng-class="['filter-item-active', {'filter-item-selected': categoryFilter === category}]" ng-click="selectCategoryFilter(category)" ng-show="countUnfiltered(clusterFilter, 'categories', category)>0">
+              <span class="filter-item-label">{{category}}</span>
+              <span class="filter-item-count">{{countFiltered(clusterFilter, 'categories', category)}} / {{countUnfiltered(clusterFilter, 'categories', category)}}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="filter" data-hide-for-one-alt="true" data-filter-name="displayGroup" data-pourover-filter="makeExactFilter" style="">
+          <div class="filter-header">
+            <i ng-class="['glyphicon', 'tiny', 'glyphicon-chevron-right', 'filter-toggle', {'chevron-rotated': filterDisplay['service']}]" ng-click="toggleFilterDisplay('service')"></i>
+            <span class="title">Services</span>
+            <span class="clear-filter" ng-show="serviceFilter!==null" ng-click="selectServiceFilter(null)">Clear</span>
+          </div>
+          <ul class="display-group-filter-values" ng-show="filterDisplay['service']">
+            <li ng-repeat="service in services() | orderBy:'+'" ng-class="['filter-item-active', {'filter-item-selected': serviceFilter === service}]" ng-click="selectServiceFilter(service)" ng-show="countUnfiltered(clusterFilter, 'service', service)>0">
+              <span class="filter-item-label">{{service}}</span>
+              <span class="filter-item-count">{{countFiltered(clusterFilter, 'service', service)}} / {{countUnfiltered(clusterFilter, 'service', service)}}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="table-panel">
+      <form class="form-horizontal well no-margin">
+        <input type="text" placeholder="Filter..." style="width:100%" ng-model="fullTextFilter" ng-change="applyFilter()">
+        <table id="resultTable" class="table table-striped">
+          <thead>
+          <tr>
+            <th ng-repeat="header in headers"><a href="#sort" ng-click="sortingClick(header.columnName)">{{header.label}}<div ng-class="['sorting', {'sorting-none': sortingColumn !== header.columnName, 'sorting-asc': sortingColumn === header.columnName && !sortingDescending, 'sorting-desc': sortingColumn === header.columnName && sortingDescending}]"></div></a></th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr ng-repeat="result in filteredResult[clusterFilter] | orderBy:sortingColumn:sortingDescending" ng-class="{danger: !result.pass, success: result.pass}">
+            <td style="text-align: center">
+              <span ng-class="['glyphicon', {passed: result.pass, failed: !result.pass, 'glyphicon-ok-sign': result.pass, 'glyphicon-exclamation-sign': !result.pass}]" title="id={{result.id}}"/><span style="display:none">{{result.pass && 'P' || 'F'}}</span>
+              <!--i style="color: green" class="glyphicon " aria-hidden="true" ng-show="result.pass"></i-->
+            </td>
+            <td><strong>{{result.description}}</strong></td>
+            <td>{{result.service}}</td>
+            <td>{{result.level}}</td>
+            <td>{{result.score}}</td>
+            <td>{{result.message}}</td>
+            <td><a href={{result.documentation?(result.documentation):""}} target="_blank"><span ng-class="['glyphicon', {'glyphicon-info-sign':result.documentation,'': !result.documentation}]"</span></a></td>
+          </tr>
+          </tbody>
+        </table>
+        <p class="text-right">Results based on deployment information as of: <strong>{{getClusterResults().deploymentTimestamp}}</strong></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="cui-title-bar" ng-show="activePage=='stats'">
+  <h1>Statistics</h1>
+</div>
+<div class="container-fluid" ng-show="activePage=='stats'">
+  <h1>Please come back later!</h1>
+</div>
+</body>
+</html>
